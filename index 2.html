@@ -1,0 +1,536 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>الأطلس الميداني التفاعلي | السفرة الجيومورفولوجية</title>
+  <meta name="description" content="أطلس ميداني تفاعلي لمحطات السفرة العلمية في الجيومورفولوجيا التطبيقية" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    :root{
+      --bg:#f4efe3;
+      --surface:#fffdf8;
+      --surface-2:#f7f1e6;
+      --ink:#20362f;
+      --muted:#67756e;
+      --line:#dccfb8;
+      --accent:#7e3f4a;
+      --accent-2:#b8925f;
+      --green:#245248;
+      --shadow:0 18px 42px rgba(31,42,37,.12);
+      --radius:22px;
+      --header-h:76px;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:"Cairo",Tahoma,Arial,sans-serif}
+    a{color:inherit}
+    body{min-height:100vh}
+    .shell{max-width:1600px;margin:0 auto;padding:14px}
+    .hero{
+      background:linear-gradient(135deg, rgba(24,56,49,.98), rgba(43,89,78,.96));
+      color:#fff; border-radius:28px; padding:18px 20px 18px; box-shadow:var(--shadow);
+      position:relative; overflow:hidden; margin-bottom:14px;
+    }
+    .hero:before, .hero:after{
+      content:""; position:absolute; inset:auto; border-radius:50%; pointer-events:none;
+      background:radial-gradient(circle at center, rgba(255,255,255,.12), transparent 64%);
+    }
+    .hero:before{width:290px;height:290px;top:-120px;left:-80px}
+    .hero:after{width:360px;height:360px;bottom:-220px;right:-120px}
+    .hero-top{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;position:relative;z-index:1}
+    .eyebrow{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);padding:7px 12px;border-radius:999px;font-size:13px;color:#eef7f1}
+    h1{margin:12px 0 10px;font-size:clamp(28px,4vw,46px);line-height:1.2}
+    .hero p{margin:0;max-width:960px;line-height:1.9;color:#e7efe9;font-size:14px}
+    .hero-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;position:relative;z-index:1}
+    .btn{appearance:none;border:0;border-radius:14px;padding:12px 16px;font:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.18s ease;white-space:nowrap}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:var(--accent);color:#fff;box-shadow:0 10px 22px rgba(126,63,74,.24)}
+    .btn.secondary{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.18)}
+    .btn.ghost{background:var(--surface-2);color:var(--ink);border:1px solid var(--line)}
+
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
+    .stat{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:15px 16px;box-shadow:0 10px 28px rgba(31,42,37,.06)}
+    .stat b{display:block;font-size:28px;color:var(--accent);line-height:1.1}
+    .stat small{display:block;margin-top:6px;color:var(--muted);font-size:13px;line-height:1.6}
+
+    .grid{display:grid;grid-template-columns:360px 1fr;gap:14px;align-items:start}
+    .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+
+    .sidebar{padding:16px;position:sticky;top:14px}
+    .sidebar-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+    .sidebar-head h2{margin:0;font-size:22px}
+    .sidebar-head span{color:var(--muted);font-size:13px}
+    .mini-note{padding:11px 13px;background:var(--surface-2);border:1px solid #eadfcd;border-radius:15px;font-size:13px;line-height:1.85;color:#5d695f;margin-bottom:12px}
+    .station-list{display:grid;gap:10px;max-height:58vh;overflow:auto;padding-inline-end:3px}
+    .station-card{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px;border-radius:18px;border:1px solid #e7dbc8;background:#fff;cursor:pointer;transition:.18s ease;text-align:right}
+    .station-card:hover{border-color:#d4bea0;transform:translateY(-1px)}
+    .station-card.active{background:linear-gradient(180deg,#f8f1e6,#f1e4d1);border-color:#d2b28c;box-shadow:0 10px 22px rgba(126,63,74,.09)}
+    .station-card .num{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:#efe2cf;color:var(--accent);font-weight:800;font-size:16px;flex:none}
+    .station-card.active .num{background:var(--accent);color:#fff}
+    .station-card strong{display:block;font-size:15px;line-height:1.55}
+    .station-card small{display:block;color:var(--muted);font-size:12px;line-height:1.6;margin-top:2px}
+    .station-card .arrow{color:#8c948f;font-size:18px}
+
+    .map-panel{overflow:hidden}
+    .map-topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #ecdfcb;background:linear-gradient(180deg,#fffcf7,#f8f1e6)}
+    .map-topbar h3{margin:0;font-size:18px}
+    .map-topbar small{color:var(--muted);display:block;font-size:12px}
+    .map-tools{display:flex;gap:8px;flex-wrap:wrap}
+    .chip{appearance:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 12px;font:inherit;color:var(--ink);cursor:pointer;font-size:13px}
+    .chip.active{background:var(--green);border-color:var(--green);color:#fff}
+    #map{height:60vh;min-height:520px;width:100%;background:#e7ecdf}
+    .map-foot{padding:10px 14px;border-top:1px solid #efe2cd;background:#fffdf8;color:#6f796f;font-size:12px;line-height:1.9}
+    .legend-inline{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .legend-inline span{display:inline-flex;align-items:center;gap:7px}
+    .dot{width:12px;height:12px;border-radius:50%;display:inline-block;background:var(--accent)}
+    .dot.start{background:var(--green)}
+    .dash{width:28px;height:0;border-top:3px dashed var(--accent);display:inline-block}
+
+    .details-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-top:14px}
+    .detail{padding:18px}
+    .detail h2{margin:8px 0 12px;font-size:30px;line-height:1.3}
+    .meta-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+    .tag{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#f3eadb;color:#7f5a47;font-size:12px;border:1px solid #e3d1b8}
+    .lead{font-size:15px;line-height:2;color:#35473f;margin:0 0 14px}
+    .fact-box{background:var(--surface-2);border:1px solid #eadbc6;border-radius:18px;padding:14px 15px;margin:12px 0}
+    .fact-box h4{margin:0 0 8px;font-size:15px;color:#7e3f4a}
+    .fact-box p{margin:0;line-height:1.95;font-size:14px;color:#30433a}
+    .detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    .coords{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;direction:ltr;text-align:left;padding:10px 12px;background:#f8f4ec;border:1px solid #e8dbc6;border-radius:14px;color:#53615a;font-size:13px}
+    .route-box{padding:18px}
+    .route-box h3{margin:0 0 8px;font-size:21px}
+    .route-box p{margin:0 0 14px;line-height:1.95;color:#485851;font-size:14px}
+    .sequence{display:grid;gap:10px}
+    .seq-item{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:10px 0;border-bottom:1px dashed #e7dac5}
+    .seq-item:last-child{border-bottom:0}
+    .seq-badge{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:#efe2cf;color:var(--accent);font-weight:800}
+    .seq-item b{display:block;font-size:14px}
+    .seq-item small{display:block;color:var(--muted);font-size:12px;line-height:1.7}
+    footer{padding:18px 8px 28px;color:#69756d;font-size:12px;line-height:1.9;text-align:center}
+
+    .leaflet-control-layers, .leaflet-popup-content-wrapper, .leaflet-popup-tip{
+      border-radius:16px;
+    }
+    .leaflet-popup-content{font-family:"Cairo",Tahoma,Arial,sans-serif;margin:14px 16px 14px 14px;min-width:200px}
+    .leaflet-popup-content h4{margin:0 0 5px;font-size:16px;color:var(--ink)}
+    .leaflet-popup-content p{margin:0;color:#59665e;line-height:1.8;font-size:13px}
+    .leaflet-container a{color:#2b5d4d}
+
+    .station-icon, .start-icon{
+      display:grid;place-items:center;border-radius:50%;color:#fff;font-weight:800;border:3px solid #fff;box-shadow:0 10px 18px rgba(25,36,33,.22)
+    }
+    .station-icon{width:32px;height:32px;background:var(--accent);font-size:14px}
+    .station-icon.active{background:#b4844a;transform:scale(1.15)}
+    .start-icon{width:34px;height:34px;background:var(--green);font-size:17px}
+
+    @media (max-width: 1180px){
+      .grid{grid-template-columns:1fr}
+      .sidebar{position:static}
+      .details-grid{grid-template-columns:1fr}
+      #map{height:54vh;min-height:430px}
+      .station-list{max-height:none}
+    }
+    @media (max-width: 760px){
+      .shell{padding:10px}
+      .hero{padding:16px 15px}
+      .stats{grid-template-columns:repeat(2,1fr)}
+      .map-topbar{flex-direction:column;align-items:flex-start}
+      .map-tools{width:100%}
+      .chip{flex:1;text-align:center}
+      .detail h2{font-size:24px}
+      #map{height:50vh;min-height:360px}
+      .station-card{grid-template-columns:auto 1fr}
+      .station-card .arrow{display:none}
+    }
+    @media (max-width: 420px){
+      .stats{grid-template-columns:1fr 1fr;gap:10px}
+      .stat{padding:13px 12px}
+      .stat b{font-size:24px}
+      .hero-actions, .detail-actions{display:grid;grid-template-columns:1fr}
+      .btn, .chip{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="eyebrow">جامعة دهوك • كلية التربية • قسم الجغرافيا • المرحلة الثانية</div>
+          <h1>الأطلس الميداني التفاعلي للسفرة الجيومورفولوجية</h1>
+          <p>
+            منصة ميدانية تفاعلية لمحطات السفرة العلمية في <strong>الجيومورفولوجيا التطبيقية</strong>، تجمع المحطات،
+            ترتيبها، الإحداثيات، الملاحظات الحقلية، والأسئلة العلمية في واجهة احترافية واحدة.
+          </p>
+          <div class="hero-actions">
+            <a class="btn primary" href="https://maps.app.goo.gl/A1sCrY4DjYXsP8cQ6?g_st=ic" target="_blank" rel="noopener">فتح مسار Google Maps الأصلي</a>
+            <button class="btn secondary" id="fitRouteBtn" type="button">إظهار كامل المسار</button>
+          </div>
+        </div>
+        <div class="eyebrow">العام الدراسي 2026–2027</div>
+      </div>
+    </section>
+
+    <section class="stats">
+      <article class="stat"><b>7</b><small>محطات علمية رئيسية على طول المسار</small></article>
+      <article class="stat"><b>1</b><small>نقطة انطلاق من جامعة دهوك</small></article>
+      <article class="stat"><b>GIS</b><small>إحداثيات دقيقة قابلة للفتح والملاحة</small></article>
+      <article class="stat"><b>Mobile</b><small>واجهة مناسبة للهاتف والعرض الميداني</small></article>
+    </section>
+
+    <section class="grid">
+      <aside class="panel sidebar">
+        <div class="sidebar-head">
+          <div>
+            <h2>محطات السفرة</h2>
+            <span>اضغط على أي محطة من القائمة أو من الخريطة</span>
+          </div>
+          <span id="currentCounter">1 / 7</span>
+        </div>
+        <div class="mini-note">
+          هذه النسخة تركز على <strong>الخريطة الحقيقية</strong> والتفاعل المباشر معها، بينما يبقى خط المسار
+          <strong>تقريبيًا بين المحطات</strong> ولا يمثل طريق القيادة التفصيلي.
+        </div>
+        <div id="stationList" class="station-list"></div>
+      </aside>
+
+      <div>
+        <section class="panel map-panel">
+          <div class="map-topbar">
+            <div>
+              <h3>الخريطة التفاعلية للمحطات</h3>
+              <small>يمكن التنقل، التكبير، وتبديل نوع الخلفية مباشرة</small>
+            </div>
+            <div class="map-tools">
+              <button class="chip active" data-basemap="terrain" type="button">تضاريس</button>
+              <button class="chip" data-basemap="sat" type="button">أقمار صناعية</button>
+              <button class="chip" data-basemap="simple" type="button">مبسطة</button>
+            </div>
+          </div>
+          <div id="map"></div>
+          <div class="map-foot">
+            <div class="legend-inline">
+              <span><i class="dot start"></i> نقطة الانطلاق</span>
+              <span><i class="dot"></i> محطة علمية</span>
+              <span><i class="dash"></i> تسلسل المسار بين المحطات</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="details-grid">
+          <article class="panel detail">
+            <div class="meta-row">
+              <span class="tag" id="tagOrder">المحطة 01</span>
+              <span class="tag" id="tagTopic">الأحواض المائية</span>
+              <span class="tag" id="tagArea">وادي هشكرۆ</span>
+            </div>
+            <h2 id="stationTitle">وادي هشكرۆ</h2>
+            <p class="lead" id="stationLead"></p>
+
+            <div class="fact-box">
+              <h4>الملاحظة الميدانية</h4>
+              <p id="stationObs"></p>
+            </div>
+
+            <div class="fact-box">
+              <h4>سؤال علمي للطلبة</h4>
+              <p id="stationQuestion"></p>
+            </div>
+
+            <div class="detail-actions">
+              <a class="btn primary" id="openGoogleBtn" target="_blank" rel="noopener">فتح موقع المحطة في Google Maps</a>
+              <button class="btn ghost" type="button" id="nextBtn">المحطة التالية</button>
+            </div>
+          </article>
+
+          <article class="panel route-box">
+            <h3>بيانات المحطة الحالية</h3>
+            <p>
+              يعرض هذا الجزء بيانات المحطة المختارة، مع الإحداثيات الجغرافية القابلة للنسخ، إضافة إلى ترتيبها ضمن
+              المسار العلمي العام.
+            </p>
+            <div class="fact-box" style="margin-top:0">
+              <h4>الإحداثيات</h4>
+              <div class="coords" id="coordsBox"></div>
+              <div class="detail-actions" style="margin-top:10px">
+                <button class="btn ghost" type="button" id="copyBtn">نسخ الإحداثيات</button>
+                <button class="btn ghost" type="button" id="fitCurrentBtn">تركيز الخريطة على المحطة</button>
+              </div>
+            </div>
+
+            <h3 style="margin-top:18px">تسلسل الرحلة</h3>
+            <div id="sequence" class="sequence"></div>
+          </article>
+        </section>
+      </div>
+    </section>
+
+    <footer>
+      إعداد أكاديمي تفاعلي للسفرة العلمية في الجيومورفولوجيا التطبيقية. الخريطة تعتمد إحداثيات صحيحة للمحطات،
+      أما الخط الواصل بينها فهو خط تسلسلي تعليمي وليس مسار قيادة ملاحيًا كاملاً.
+    </footer>
+  </div>
+
+  <script>
+    const startPoint = {
+      name: 'جامعة دهوك',
+      short: 'الانطلاق',
+      lat: 36.8564822,
+      lng: 42.9180556,
+      type: 'start'
+    };
+
+    const stations = [
+      {
+        id: 1,
+        name: 'وادي هشكرۆ',
+        area: 'وادي هشكرۆ',
+        topic: 'الأحواض والفيضانات',
+        subtitle: 'الجريان السطحي والفيضانات',
+        lat: 36.848055556,
+        lng: 43.043055556,
+        lead: 'تفسير شكل الحوض وشبكة التصريف، ومناقشة أثر الجريان السطحي والتوسع العمراني في زيادة مخاطر الفيضانات.',
+        observation: 'مجرى الوادي، ضفافه، التراكمات الحصوية، آثار الجريان الفيضي، وعلاقة المجرى بالمناطق المبنية القريبة.',
+        question: 'لماذا يزداد خطر الفيضان عندما تتجه مياه الأودية نحو مناطق منخفضة أو عمرانية؟'
+      },
+      {
+        id: 2,
+        name: 'باكيرا',
+        area: 'باكيرا',
+        topic: 'حركة المواد والمنحدرات',
+        subtitle: 'حركة المواد على المنحدرات',
+        lat: 36.948888889,
+        lng: 43.163888889,
+        lead: 'فحص حركات المواد على السفوح، وربطها بدرجة الانحدار، التفكك الصخري، والمياه المتسربة داخل المنحدر.',
+        observation: 'ركام السفوح، مواضع الانفصال، شقوق المنحدرات، أشكال الانهيال أو الانزلاق، وحجم المفتتات الصخرية.',
+        question: 'كيف نميز ميدانيًا بين تساقط الصخور والانزلاق الأرضي والزحف؟'
+      },
+      {
+        id: 3,
+        name: 'أشاوة',
+        area: 'أشاوة',
+        topic: 'الطبقات والفواصل والتجوية',
+        subtitle: 'أسطح التطبق والفواصل والشقوق',
+        lat: 37.020833333,
+        lng: 43.291666667,
+        lead: 'دراسة أسطح التطبق وميلها والفواصل والشقوق ودورها في توجيه التجوية والتعرية وحركة المياه داخل الصخور.',
+        observation: 'اتجاه الطبقات، زاوية ميلها، الفواصل الصخرية، الشقوق، وأثرها في تشقق السطح الصخري.',
+        question: 'ما الفرق الميداني بين سطح التطبق والفاصل الصخري؟'
+      },
+      {
+        id: 4,
+        name: 'موقع الحصاد المائي',
+        area: 'إنيشكي',
+        topic: 'الحصاد المائي',
+        subtitle: 'تجميع الجريان السطحي',
+        lat: 37.09779596213569,
+        lng: 43.34610288964263,
+        lead: 'فهم آلية استثمار الجريان السطحي في الحصاد المائي، وعلاقة الموقع بالتضاريس، ومسارات الماء، والرواسب.',
+        observation: 'مداخل المياه، منشأة التجميع، شكل السطح المحيط، والرواسب المتراكمة قرب نقطة الحجز أو التجميع.',
+        question: 'ما الخصائص التضاريسية التي تجعل هذا الموضع مناسبًا للحصاد المائي؟'
+      },
+      {
+        id: 5,
+        name: 'كهف إنيشكي',
+        area: 'إنيشكي',
+        topic: 'العمليات الكارستية',
+        subtitle: 'الكارست والكهوف',
+        lat: 37.110657706381794,
+        lng: 43.35834961616051,
+        lead: 'تفسير تشكل الكهوف بالذوبان الكيميائي للصخور الكربوناتية، وتوسع الشقوق والفواصل بفعل المياه.',
+        observation: 'مدخل الكهف، مسارات تسرب المياه، الفواصل المؤدية للتوسع، وآثار الإذابة الكارستية في الصخور.',
+        question: 'كيف تؤدي المياه المشبعة بثاني أكسيد الكربون إلى إذابة الحجر الجيري وتكوين الكهوف؟'
+      },
+      {
+        id: 6,
+        name: 'قلعة العمادية',
+        area: 'العمادية',
+        topic: 'الطيات والبنية التضاريسية',
+        subtitle: 'الطيات والبنية التضاريسية',
+        lat: 37.09106582,
+        lng: 43.48469927,
+        lead: 'رؤية المشهد الجبلي المحيط، وفهم طيتي متين وكارا المحدبتين والطية المقعرة الواقعة بينهما ضمن الإطار البنيوي العام.',
+        observation: 'الخطوط الجبلية، حافات الطيات، السفوح، اتجاه الانحدارات، وعلاقة التضرس بالبنية الجيولوجية.',
+        question: 'ما أثر التراكيب الالتوائية في توجيه المجاري وتوزيع الانحدارات؟'
+      },
+      {
+        id: 7,
+        name: 'نهر صبنة',
+        area: 'قرب العمادية',
+        topic: 'النحت والنقل والترسيب النهري',
+        subtitle: 'النحت والنقل والترسيب النهري',
+        lat: 37.061876410399286,
+        lng: 43.53173165334668,
+        lead: 'تطبيق مفاهيم الوادي النهري، وملاحظة أشكال النحت والنقل والترسيب، مع ربطها بطاقة الجريان والانحدار.',
+        observation: 'الحصى والرمال، الضفاف، آثار النحت الجانبي أو الرأسي، ومواقع الترسيب داخل المجرى أو على جانبيه.',
+        question: 'لماذا تختلف أحجام الرواسب بين مجرى جبلي شديد الانحدار ومجرى أقل انحدارًا؟'
+      }
+    ];
+
+    const routeLink = 'https://maps.app.goo.gl/A1sCrY4DjYXsP8cQ6?g_st=ic';
+    let currentIndex = 0;
+
+    const map = L.map('map', {
+      zoomControl: true,
+      attributionControl: true,
+      scrollWheelZoom: true
+    });
+
+    const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+      maxZoom: 17,
+      attribution: '© OpenTopoMap contributors'
+    });
+
+    const simpleLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 20,
+      attribution: '© OpenStreetMap contributors © CARTO'
+    });
+
+    const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: 'Tiles © Esri'
+    });
+
+    const baseLayers = { terrain: terrainLayer, sat: satLayer, simple: simpleLayer };
+    terrainLayer.addTo(map);
+
+    const routeCoords = [startPoint, ...stations].map(p => [p.lat, p.lng]);
+    const bounds = L.latLngBounds(routeCoords);
+    map.fitBounds(bounds.pad(0.10));
+
+    const routeLine = L.polyline(routeCoords, {
+      color: '#7e3f4a',
+      weight: 4,
+      dashArray: '10, 10',
+      opacity: 0.9,
+      lineJoin: 'round'
+    }).addTo(map);
+
+    function stationIcon(n, active=false){
+      return L.divIcon({
+        className: '',
+        html: `<div class="station-icon ${active ? 'active' : ''}">${n}</div>`,
+        iconSize: [32,32],
+        iconAnchor: [16,16],
+        popupAnchor: [0,-16]
+      });
+    }
+
+    const startMarker = L.marker([startPoint.lat, startPoint.lng], {
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="start-icon">★</div>',
+        iconSize: [34,34],
+        iconAnchor: [17,17],
+        popupAnchor: [0,-16]
+      })
+    }).addTo(map).bindPopup(`<h4>${startPoint.name}</h4><p>نقطة الانطلاق المعتمدة للمسار العلمي.</p>`);
+
+    const markerRefs = [];
+    stations.forEach((s, idx) => {
+      const marker = L.marker([s.lat, s.lng], { icon: stationIcon(s.id) })
+        .addTo(map)
+        .bindPopup(`<h4>${s.name}</h4><p>${s.subtitle}</p>`)
+        .on('click', () => selectStation(idx, true));
+      markerRefs.push(marker);
+    });
+
+    const stationList = document.getElementById('stationList');
+    const sequence = document.getElementById('sequence');
+
+    function renderLists(){
+      stationList.innerHTML = stations.map((s, idx) => `
+        <button class="station-card ${idx===currentIndex?'active':''}" onclick="selectStation(${idx})">
+          <span class="num">${s.id}</span>
+          <span>
+            <strong>${s.name}</strong>
+            <small>${s.subtitle}</small>
+          </span>
+          <span class="arrow">‹</span>
+        </button>
+      `).join('');
+
+      sequence.innerHTML = stations.map((s, idx) => `
+        <div class="seq-item">
+          <span class="seq-badge">${s.id}</span>
+          <div>
+            <b>${s.name}</b>
+            <small>${s.topic}</small>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setBaseMap(type){
+      Object.entries(baseLayers).forEach(([key, layer]) => {
+        if (map.hasLayer(layer)) map.removeLayer(layer);
+      });
+      baseLayers[type].addTo(map);
+      document.querySelectorAll('.chip[data-basemap]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.basemap === type);
+      });
+    }
+
+    function selectStation(index, fromMap=false){
+      currentIndex = index;
+      const s = stations[index];
+
+      renderLists();
+      document.getElementById('currentCounter').textContent = `${index+1} / ${stations.length}`;
+      document.getElementById('tagOrder').textContent = `المحطة ${String(s.id).padStart(2,'0')}`;
+      document.getElementById('tagTopic').textContent = s.topic;
+      document.getElementById('tagArea').textContent = s.area;
+      document.getElementById('stationTitle').textContent = s.name;
+      document.getElementById('stationLead').textContent = s.lead;
+      document.getElementById('stationObs').textContent = s.observation;
+      document.getElementById('stationQuestion').textContent = s.question;
+      document.getElementById('coordsBox').textContent = `${s.lat.toFixed(6)}, ${s.lng.toFixed(6)}`;
+      document.getElementById('openGoogleBtn').href = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lng}`;
+
+      markerRefs.forEach((m, i) => m.setIcon(stationIcon(stations[i].id, i === index)));
+
+      if (!fromMap) {
+        map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 11), { duration: 0.8 });
+      }
+    }
+
+    document.querySelectorAll('.chip[data-basemap]').forEach(btn => {
+      btn.addEventListener('click', () => setBaseMap(btn.dataset.basemap));
+    });
+
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const s = stations[currentIndex];
+      const text = `${s.lat}, ${s.lng}`;
+      try {
+        await navigator.clipboard.writeText(text);
+        alert('تم نسخ الإحداثيات');
+      } catch (e) {
+        prompt('انسخ الإحداثيات يدويًا:', text);
+      }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      selectStation((currentIndex + 1) % stations.length);
+    });
+
+    document.getElementById('fitCurrentBtn').addEventListener('click', () => {
+      const s = stations[currentIndex];
+      map.flyTo([s.lat, s.lng], 12, { duration: 0.8 });
+      markerRefs[currentIndex].openPopup();
+    });
+
+    document.getElementById('fitRouteBtn').addEventListener('click', () => {
+      map.fitBounds(bounds.pad(0.10));
+    });
+
+    selectStation(0);
+  </script>
+</body>
+</html>
